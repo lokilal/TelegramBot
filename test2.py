@@ -1,14 +1,15 @@
 import telebot
 import time
 import datetime
-
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from mysql.connector import Error
 from multiprocessing import *
 import schedule
 import mysql.connector
 from telebot import types
-
+"""
+Работающий бот
+"""
 
 bot = telebot.TeleBot('1656502971:AAFlJSfiLpEH8t0Eg3GBkQdcgMNlGNtaf5o')
 bd = mysql.connector.connect(
