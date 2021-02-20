@@ -1,12 +1,15 @@
 import telebot
 import time
 import datetime
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from mysql.connector import Error
 from multiprocessing import *
 import schedule
 import mysql.connector
 from telebot import types
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
 """
 Работающий бот
 """
@@ -60,7 +63,7 @@ class P_schedule():  # Class для работы с schedule
 
 
 
-###Настройки команд telebot#########
+###Настройки команд telebot######### Общение между ботом и пользователем.
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -70,8 +73,10 @@ def callback_inline(call):
            if call.data == "time":
                bot.send_message(call.message.chat.id, 'Напишите во сколько отправлять вам уведомления в формате xx:xx.'
                                                       'Например: 21:20 или 09:05')
-           if call.data == "res":
-               bot.send_message(call.message.chat.id, "Скоро будет обновление")
+           if call.data == "new_res":
+               bot.send_message(call.message.chat.id,'Скоро будет обновление!!' )
+           if call.data == "stat":
+               statistic()
    except Exception as e:
        print("No")
 
@@ -85,8 +90,9 @@ def start_message(message):
 def start_message(message):
     otvet = types.InlineKeyboardMarkup(row_width=2)
     button1 = types.InlineKeyboardButton(" Изменить вермя", callback_data='time')
-    button2 = types.InlineKeyboardButton(" Добавить результат", callback_data='res')
-    otvet.add(button1, button2)
+    button2 = types.InlineKeyboardButton(" Добавить результат", callback_data='new_res')
+    button3 = types.InlineKeyboardButton(" Показать статистику", callback_data='stat')
+    otvet.add(button1, button2, button3)
     bot.send_message(message.chat.id, text='Привет, ты написал боту, который помогает отслеживать результаты подготовки к ЕГЭ. '
                                            'Для того, чтобы узнать на что способен этот бот - напиши /help ' , reply_markup=otvet)
     try:
@@ -122,9 +128,47 @@ def message(message):
 
 
 
-#####################
+##################### Закончился блок ,связанный с общением с ботом.
+
+#Блок, связанный с отправкой стистики.
+def query_to_bigquery(query):
+    cursor.execute(query)
+    result = cursor.fetchall()
+    dataframe = pd.DataFrame(result, columns= ['user_id', 'time'])
+    return dataframe
 
 
+def visualize_bar_chart(x, x_label, y, y_label, title):
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    index = np.arange(len(x))
+    plt.xticks(index, x, fontsize=5, rotation=30)
+    plt.bar(index, y)
+    return plt
+
+
+def get_and_save_image(): #Вызывает функцию для сбора данных
+    query = """
+            SELECT user_id, time FROM users
+            """
+    dataframe = query_to_bigquery(query) # Получение DataFrame
+    x = dataframe['user_id'].tolist()
+    y = dataframe['time'].tolist()
+    plt = visualize_bar_chart(x=x, x_label='user_id', y=y, y_label='time', title='Test')
+    plt.savefig('viz.png')
+
+
+def send_image():
+    get_and_save_image()
+    chat_id = '403373517'
+    bot.send_photo(chat_id=chat_id, photo=open('viz.png', 'rb'))
+
+
+def statistic():
+    send_image()
+
+#Закончился блок со статистикой
 
 
 if __name__ == '__main__':
