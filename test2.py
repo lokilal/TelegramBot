@@ -51,7 +51,9 @@ class P_schedule():  # Class для работы с schedule
         for x, y in row: # Проверяет текущее время с тем, что указано в БД
             now = datetime.datetime.now() #Для работы со временем
             if now.strftime("%H:%M") == x:
-                bot.send_message(y, 'Отправка сообщения по времени')
+                bot.send_message(y, 'Эй, пора начинать готовиться к ЕГЭ! ' )
+
+                print("Сработал будильник у " + str(y))
 
     ################
 
@@ -66,7 +68,8 @@ def callback_inline(call):
    try:
        if call.message:
            if call.data == "time":
-               bot.send_message(call.message.chat.id, 'Напишите во сколько отправлять вам уведомления в формате xx:xx')
+               bot.send_message(call.message.chat.id, 'Напишите во сколько отправлять вам уведомления в формате xx:xx.'
+                                                      'Например: 21:20 или 09:05')
            if call.data == "res":
                bot.send_message(call.message.chat.id, "Скоро будет обновление")
    except Exception as e:
@@ -91,9 +94,9 @@ def start_message(message):
         val = ('NULL', message.from_user.id)
         cursor.execute(sql, val)
         bd.commit()
-        print("Опа, новенький!")
+        print("Опа, новенький! " + str(message.from_user.id) + " ,Вот он")
     except:
-        print("Сообщение от старичков")
+        print("Сообщение от старичков, а именно от "  + str(message.from_user.id))
 
 
 
@@ -104,9 +107,8 @@ def message(message):
         #Проверка сообщения на время.
         if len(message.text) == 5 and 0 <= int(message.text[:2]) < 24 and 0 <= int(message.text[3:]) < 60 and \
                 message.text[2] == ':':
-            print("Yes")
             try:
-                print("Кто-то решил поставить таймер")
+                print("Кто-то решил установить будильник/ Изменить время будильника " + str(message.from_user.id))
                 sql = "UPDATE users SET time = (%s) WHERE  user_id = (%s)"
                 val = (message.text, message.from_user.id)
                 cursor.execute(sql, val)
