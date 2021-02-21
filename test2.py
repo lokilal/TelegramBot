@@ -74,9 +74,9 @@ def callback_inline(call):
                bot.send_message(call.message.chat.id, 'Напишите во сколько отправлять вам уведомления в формате xx:xx.'
                                                       'Например: 21:20 или 09:05')
            if call.data == "new_res":
-               bot.send_message(call.message.chat.id,'Скоро будет обновление!!' )
+               bot.send_message(call.message.chat.id, 'Напишите ваш результат.')
            if call.data == "stat":
-               statistic()
+               statistic(call.message.chat.id)
    except Exception as e:
        print("No")
 
@@ -105,8 +105,6 @@ def start_message(message):
         print("Сообщение от старичков, а именно от "  + str(message.from_user.id))
 
 
-
-
 @bot.message_handler(content_types=['text'])
 def message(message):
     try:
@@ -122,6 +120,25 @@ def message(message):
                 bot.send_message(message.chat.id, "Ваше время изменено " + message.text)
             except Exception as e:
                 print("Проблемы с таблицей")
+        if len(message.text) <=3 and int(message.text) <= 100:
+            now = datetime.datetime.now()
+            try:  # Создаем столбец, название - сегодняшяя дата.
+                sql = "ALTER TABLE `users` ADD `{:s}` INT".format(str(now.strftime("%d.%m.%Y")))
+                cursor.execute(sql)
+                sql = "UPDATE users SET {:s} = (%s) WHERE  user_id = (%s)".format(str(now.strftime("%d.%m.%Y")))
+                val = (message.text, message.from_user.id)
+                cursor.execute(sql, val)
+                bd.commit()
+                print("Создаем таблицу этого дня")
+                bot.send_message(message.chat.id, "Успешно добавлено ")
+            except Exception as e:
+                sql = "UPDATE `users` SET `{:s}` = (%s) WHERE  user_id = (%s)".format(str(now.strftime("%d.%m.%Y")))
+                val = (message.text, message.from_user.id)
+                cursor.execute(sql, val)
+                bd.commit()
+                bot.send_message(message.chat.id, "Успешно добавлено ")
+
+
 
     except ValueError:
         bot.send_message(message.chat.id, 'Время пишется цифрами')
@@ -130,11 +147,19 @@ def message(message):
 
 ##################### Закончился блок ,связанный с общением с ботом.
 
+
+
 #Блок, связанный с отправкой стистики.
 def query_to_bigquery(query):
     cursor.execute(query)
     result = cursor.fetchall()
-    dataframe = pd.DataFrame(result, columns= ['user_id', 'time'])
+    temp = [tuple(int(result[0][i]) for i in range(3, len(*result)))]
+    cursor.execute("SELECT * FROM `users` WHERE id = '3';")
+    tmp = cursor.fetchall()
+    temp2 =[tuple(tmp[0][i] for i in range(3, len(*result)))]
+    data = [temp2[0], temp[0]]
+    dataframe = pd.DataFrame(data, index= ['time', 'res']).T
+    print(dataframe)
     return dataframe
 
 
@@ -143,30 +168,30 @@ def visualize_bar_chart(x, x_label, y, y_label, title):
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     index = np.arange(len(x))
-    plt.xticks(index, x, fontsize=5, rotation=30)
+    plt.xticks(index, x, fontsize=15, rotation=0)
     plt.bar(index, y)
     return plt
 
 
-def get_and_save_image(): #Вызывает функцию для сбора данных
-    query = """
-            SELECT user_id, time FROM users
-            """
+def get_and_save_image(id): #Вызывает функцию для сбора данных
+    query = "SELECT * FROM `users` WHERE user_id = '{:s}'".format(str(id))
     dataframe = query_to_bigquery(query) # Получение DataFrame
-    x = dataframe['user_id'].tolist()
-    y = dataframe['time'].tolist()
-    plt = visualize_bar_chart(x=x, x_label='user_id', y=y, y_label='time', title='Test')
+    x = dataframe['time'].tolist()
+    y = dataframe['res'].tolist()
+    print(x)
+    print(y)
+    plt = visualize_bar_chart(x=x, x_label='Дата', y=y, y_label='Результат', title='Статистика')
     plt.savefig('viz.png')
 
 
-def send_image():
-    get_and_save_image()
-    chat_id = '403373517'
+def send_image(id):
+    get_and_save_image(id)
+    chat_id = id
     bot.send_photo(chat_id=chat_id, photo=open('viz.png', 'rb'))
 
 
-def statistic():
-    send_image()
+def statistic(id):
+    send_image(id)
 
 #Закончился блок со статистикой
 
