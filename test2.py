@@ -6,10 +6,8 @@ from multiprocessing import *
 import schedule
 import mysql.connector
 from telebot import types
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-
+import plotly.graph_objs as go
 """
 Работающий бот
 """
@@ -159,18 +157,7 @@ def query_to_bigquery(query):
     temp2 =[tuple(tmp[0][i] for i in range(3, len(*result)))]
     data = [temp2[0], temp[0]]
     dataframe = pd.DataFrame(data, index= ['time', 'res']).T
-    print(dataframe)
     return dataframe
-
-
-def visualize_bar_chart(x, x_label, y, y_label, title):
-    plt.title(title)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    index = np.arange(len(x))
-    plt.xticks(index, x, fontsize=15, rotation=0)
-    plt.bar(index, y)
-    return plt
 
 
 def get_and_save_image(id): #Вызывает функцию для сбора данных
@@ -178,16 +165,41 @@ def get_and_save_image(id): #Вызывает функцию для сбора �
     dataframe = query_to_bigquery(query) # Получение DataFrame
     x = dataframe['time'].tolist()
     y = dataframe['res'].tolist()
-    print(x)
-    print(y)
-    plt = visualize_bar_chart(x=x, x_label='Дата', y=y, y_label='Результат', title='Статистика')
-    plt.savefig('viz.png')
+    layout = dict(plot_bgcolor='white',
+                  margin=dict(t=35, l=20, r=20, b=10),
+                  xaxis=dict(title='Дата',
+                             range=[-1, 5.5],
+                             linecolor='#d9d9d9',
+                             showgrid=False,
+                             mirror=True),
+                  yaxis=dict(title='Результат',
+                             range=[0, 100],
+                             linecolor='#d9d9d9',
+                             showgrid=False,
+                             mirror=True))
+
+    data = go.Scatter(x=x,
+                      y=y,
+                      text=y,
+                      textposition='top right',
+                      textfont=dict(color='#E58606'),
+                      mode='lines+markers+text',
+                      marker=dict(color='#5D69B1', size=9),
+                      line=dict(color='#52BCA3', width=1, dash='dash'),
+                      name='citations')
+
+    fig = go.Figure(data=data, layout=layout)
+    fig.update_layout(
+        title_text="Статистика"
+    )
+    fig.write_image("viz.png")
 
 
 def send_image(id):
     get_and_save_image(id)
     chat_id = id
     bot.send_photo(chat_id=chat_id, photo=open('viz.png', 'rb'))
+    print(id + " Понадобилась статистика")
 
 
 def statistic(id):
