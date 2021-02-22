@@ -89,7 +89,10 @@ def callback_inline(call):
             if call.data == "new_res":
                 bot.send_message(call.message.chat.id, 'Напишите ваш результат.')
             if call.data == "stat":
-                statistic(call.message.chat.id)
+                try:
+                    statistic(call.message.chat.id)
+                except Exception as e :
+                    bot.send_message(call.message.chat.id, "Вы не добавили результаты")
     except Exception as e:
         print("No")
 
@@ -117,6 +120,12 @@ def start_message(message):
         print("Опа, новенький! " + str(message.from_user.id) + " ,Вот он")
     except:
         print("Сообщение от старичков, а именно от " + str(message.from_user.id))
+
+
+@bot.message_handler(commands=['stat'])
+def start_message(message):
+    statistic(message.chat.id)
+
 
 
 @bot.message_handler(content_types=['text'])
@@ -151,20 +160,26 @@ def message(message):
         bot.send_message(message.chat.id, 'Время пишется цифрами')
 
 
+
 ##################### Закончился блок ,связанный с общением с ботом.
 
 
 # Блок, связанный с отправкой стистики.
-def query_to_bigquery(query):
+def query_to_bigquery(query): # при цикле нужно сделать try, если не работает, то отправлять письмо.
     cursor.execute(query)
     result = cursor.fetchall()
     temp = [tuple(int(result[0][i]) for i in range(3, len(*result)) if result[0][i] != None)]
+    id_for_delete = [i-3 for i in range(3, len(*result)) if result[0][i] != None] # Хранятся номера, которые не нужно удалить
+    id_for_delete.sort()
     cursor.execute("SELECT * FROM `users` WHERE id = '1';")
     tmp = cursor.fetchall()
-    temp2 = [tuple(tmp[0][i] for i in range(3, len(*result)))]
-    data = [temp2[0], temp[0]]
+    temp2 = [tmp[0][i] for i in range(3, len(*result))] # Массив, в котором хранятся даты
+    temp3 = [temp2[i] for i in id_for_delete]
+    data = [tuple(temp3), temp[0]]
     dataframe = pd.DataFrame(data, index=['time', 'res']).T
-    return dataframe
+    if len(dataframe) == 0:
+        return None
+    else: return dataframe
 
 
 def get_and_save_image(id):  # Рисует график
